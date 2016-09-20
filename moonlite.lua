@@ -1,12 +1,7 @@
 --[[
 TODO:
--shift
-_.push(a, _.pop(a, 2))
-print(unpack(a))
 
-+shift
-_.addTop(a, _.unshift(a, 1))
-print(unpack(a))
+meta __add for numbers and notes
 
 --]]
 
@@ -117,8 +112,17 @@ end
 
 -- Methods
 
+function meth:shift(a)
+  local x
+  if a < 0 then
+    x = moses.push(self, moses.pop(self, a))
+  else
+    x = moses.addTop(self, moses.unshift(self, a))
+  end
+  return x
+end
 
-
+mt.__index = meth
 -- Time Functions
 
 ffi.cdef[[
@@ -156,3 +160,5 @@ function M.c_wrap(c, l)
     return v
   end
 end
+
+return M
