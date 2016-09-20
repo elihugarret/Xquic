@@ -115,7 +115,7 @@ end
 function meth:shift(a)
   local x
   if a < 0 then
-    x = moses.push(self, moses.pop(self, a))
+    x = moses.push(self, moses.pop(self, math.abs(a)))
   else
     x = moses.addTop(self, moses.unshift(self, a))
   end
