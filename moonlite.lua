@@ -1,7 +1,6 @@
 --[[
 TODO:
 
-meta __add for numbers and notes
 
 --]]
 
@@ -58,6 +57,21 @@ local samples = {
 
 -- Local Functions
 
+local function midi_notes()
+  local n = "c c# d d# e f f# g g# a a# b"
+  local t = {}
+  local c = 0
+  for i = -1, 8 do
+    for j in n:gmatch"%g+" do
+      t[j..i] = c
+      c = c + 1
+    end
+  end
+  return t
+end
+
+M.n = midi_notes()
+
 local function syn(s)
   local t = {}
   local i, j = 1, 1
@@ -110,6 +124,44 @@ function M.N(n)
   end
 end
 
+-- Meta T
+
+function mt.__add(a, b)
+  local t = {}
+  local x, y
+  for i = 1, #a do
+    x = M.n[a[i]]
+    y = a[i]
+    if x then
+      t[i] = x + b
+    elseif type(y) == "number" then
+      t[i] = y + b
+    else
+      t[i] = "."
+    end
+  end
+  return t
+end
+
+function mt.__sub(a, b)
+  local t = {}
+  local x, y
+  for i = 1, #a do
+    x = M.n[a[i]]
+    y = a[i]
+    if x then
+      t[i] = x - b
+    elseif type(y) == "number" then
+      t[i] = y - b
+    else
+      t[i] = "."
+    end
+  end
+  return t
+end
+
+function mt.__unm(a) return moses.reverse(a) end
+
 -- Methods
 
 function meth:shift(a)
@@ -122,21 +174,8 @@ function meth:shift(a)
   return x
 end
 
+
 mt.__index = meth
--- Time Functions
-
-ffi.cdef[[
-  void Sleep(int ms);
-  int poll(struct pollfd *fds, unsigned long nfds, int timeout);
-]]
-
-if ffi.os == "Windows" then
-  function M.sleep(s) ffi.C.Sleep(s*1000) end
-else
-  function M.sleep(s) ffi.C.poll(nil, 0, s*1000) end
-end
-
-function M.bpm(beats) return (60/b) / 2 end
 
 -- General Functions
 
@@ -160,5 +199,21 @@ function M.c_wrap(c, l)
     return v
   end
 end
+
+-- Time Functions
+
+ffi.cdef[[
+  void Sleep(int ms);
+  int poll(struct pollfd *fds, unsigned long nfds, int timeout);
+]]
+
+if ffi.os == "Windows" then
+  function M.sleep(s) ffi.C.Sleep(s*1000) end
+else
+  function M.sleep(s) ffi.C.poll(nil, 0, s*1000) end
+end
+
+function M.bpm(beats) return (60/b) / 2 end
+
 
 return M
