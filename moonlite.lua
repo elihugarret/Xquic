@@ -1,6 +1,6 @@
 --[[
 TODO:
-
+ read keys in table
 
 --]]
 
@@ -17,15 +17,25 @@ local audio = require "proAudioRt"
 math.randomseed(os.clock())
 
 -- local variables
-local loadf = audio.sampleFromFile
+local random = math.random
 local xp = xpcall
-local mt = {} -- The Meta T
-local meth  = {} -- The Meths
--- Load samples
+local wrap = coroutine.wrap
+local yield = coroutine.yield
 
+local loadf = audio.sampleFromFile
+local play = audio.soundPlay
+
+local send_message = midi.sendMessage
+local note_on = midi.noteOn
+
+local mt = {} -- The Meta T
+local mtt = {} -- Another Meta T
+
+-- Load samples
 -- Sets a drum kit
 M.kit = ""
 -- You can add more samples here!
+local s_dir = "../Samples/Sounds/"
 local dir = "../Samples/"..M.kit
 local kick = loadf(dir.."kick.ogg")
 local snare = loadf(dir.."snare.ogg")
@@ -113,7 +123,7 @@ end
 
 -- Objects
 
-function M.N(n)
+function M.Seq(n) -- notes
   if type(n) == "table" then
     setmetatable(n, mt)
     return n
@@ -162,22 +172,23 @@ end
 
 function mt.__unm(a) return moses.reverse(a) end
 
--- Methods
+-- General Functions
 
-function meth:shift(a)
-  local x
-  if a < 0 then
-    x = moses.push(self, moses.pop(self, math.abs(a)))
-  else
-    x = moses.addTop(self, moses.unshift(self, a))
-  end
-  return x
+-- Time Functions
+
+ffi.cdef[[
+  void Sleep(int ms);
+  int poll(struct pollfd *fds, unsigned long nfds, int timeout);
+]]
+
+if ffi.os == "Windows" then
+  function M.sleep(s) ffi.C.Sleep(s*1000) end
+else
+  function M.sleep(s) ffi.C.poll(nil, 0, s*1000) end
 end
 
-
-mt.__index = meth
-
--- General Functions
+function M.bpm(beats) return (60/b) / 2 end
+--
 
 function M.init(file)
   while true do
@@ -200,20 +211,94 @@ function M.c_wrap(c, l)
   end
 end
 
--- Time Functions
-
-ffi.cdef[[
-  void Sleep(int ms);
-  int poll(struct pollfd *fds, unsigned long nfds, int timeout);
-]]
-
-if ffi.os == "Windows" then
-  function M.sleep(s) ffi.C.Sleep(s*1000) end
-else
-  function M.sleep(s) ffi.C.poll(nil, 0, s*1000) end
+function M.choose(...)
+  local v = {...}
+  return v[random(#v)]
 end
 
-function M.bpm(beats) return (60/b) / 2 end
+function M.sample(s)
+  s.disparity = s.disparity or 0
+  s.pitch = s.pitch or 1
+  s.L = s.L or .5
+  s.R = s.R or .5
+  local sound = loadf(dire..s.file..".ogg")
+  play(sound, s.L, s.R, s.disparity, s.pitch)
+end
 
+-- Midi funcs
+
+function M.off(port, note, channel)
+  if note and note ~= "." then
+    send_message(port, 128, M.n[note] or note, 0, channel)
+  end
+end
+
+function M.on(port, note, vel, channel)
+  if not note and note ~= "." then
+    note_on(port, 128, M.n[note] or note, 0, channel)
+  end
+end
+
+-- Methods
+
+function meth:shift(a)
+  local x
+  if a < 0 then
+    x = moses.push(self, moses.pop(self, math.abs(a)))
+  else
+    x = moses.addTop(self, moses.unshift(self, a))
+  end
+  return x
+end
+
+function meth:as_chord(counter, inicial, final, port, vel, channel)
+  port = port or 0
+  vel = vel or 77
+  channel = channel or 0
+  if counter == inicial then
+    for c, v in ipairs(self) do
+      M.on(port, M.n[v] or v, vel, channel)
+    end
+  elseif counter == final then
+    for x, y in ipairs(self) do
+      M.off(port,  M.n[v] or v, channel)
+    end
+  end
+end
+
+--
+local cor1 = wrap(function (v)
+  while true do
+    for x in v:gmatch"." do
+      if x == " "  then
+        yield(x)
+      else
+        yield(x)
+      end
+    end
+  end
+end)
+
+local cor2 = wrap(function (t)
+  while true do
+    for i = 1, #t do
+      yield(t[i])
+    end
+  end
+end)
+--
+function meth:as_pattern(p)
+  local t = {}
+  for i=1, #self do
+    if cor1(p) == " " then
+      t[i] = "."
+    else
+      t[i] = cor2(self)
+    end
+  end
+  return t
+end
+
+mt.__index = meth
 
 return M
