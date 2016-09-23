@@ -4,7 +4,6 @@ TODO:
 
 --]]
 
-
 local M = {}
 
 -- Load external libs
@@ -12,6 +11,8 @@ local moses = require "moses"
 local midi = require "luamidi"
 local ffi = require "ffi"
 local audio = require "proAudioRt"
+
+if not audio.create() then os.exit() end
 
 -- The Seed
 math.randomseed(os.clock())
@@ -28,9 +29,18 @@ local play = audio.soundPlay
 local send_message = midi.sendMessage
 local note_on = midi.noteOn
 
+local add_top = moses.addTop
+local push = moses.push
+local pop = moses.pop
+local unshift = moses. unshift
+
 local mt = {} -- The Meta T
 local mtt = {} -- Another Meta T
 
+-- non-local stuff
+M.range = moses.range
+M.loop = audio.loop
+M.stop = audio.soundStop
 -- Load samples
 -- Sets a drum kit
 M.kit = ""
@@ -80,8 +90,6 @@ local function midi_notes()
   return t
 end
 
-M.n = midi_notes()
-
 local function syn(s)
   local t = {}
   local i, j = 1, 1
@@ -102,12 +110,22 @@ local function syn(s)
   return t
 end
 
-local function normalize(i, f, t)
+local function int_normalize(i, f, t)
   local tr = {}
   local x_max = moses.max(t)
   local x_min = moses.min(t)
   for j = 1, #t do
-    tr[j] = floor(i + (((t[j] - x_min) * (f - i)) / (x_max - x_min)))
+    tr[j] = math.floor(i + (((t[j] - x_min) * (f - i)) / (x_max - x_min)))
+  end
+  return tr
+end
+
+local function ft_normalize(i, f, t)
+  local tr = {}
+  local x_max = moses.max(t)
+  local x_min = moses.min(t)
+  for j = 1, #t do
+    tr[j] = i + (((t[j] - x_min) * (f - i)) / (x_max - x_min))
   end
   return tr
 end
@@ -119,6 +137,38 @@ local function specific_normal(t1, t2)
     tq[c] = t1[v]
   end
   return tq
+end
+
+local cor1 = wrap(function (v)
+  while true do
+    for x in v:gmatch"." do
+      if x == " "  then
+        yield(x)
+      else
+        yield(x)
+      end
+    end
+  end
+end)
+
+local cor2 = wrap(function (t)
+  while true do
+    for i = 1, #t do
+      yield(t[i])
+    end
+  end
+end)
+
+local function extract(a)
+  local t = {}
+  local j = 1
+  for i = 1, #a do
+    if a[i] ~= "." then
+      t[j] = a[i]
+      j = j + 1
+    end
+  end
+  return t
 end
 
 -- Objects
@@ -216,6 +266,8 @@ function M.choose(...)
   return v[random(#v)]
 end
 
+-- Audio funcs
+
 function M.sample(s)
   s.disparity = s.disparity or 0
   s.pitch = s.pitch or 1
@@ -225,7 +277,16 @@ function M.sample(s)
   play(sound, s.L, s.R, s.disparity, s.pitch)
 end
 
+function splay(sound, left, right, disparity, pitch)
+  if sound and type(sound) == "string" and sound ~= "." then
+    play(samples[sound], left, right, disparity, pitch)
+  end
+end
+
+
 -- Midi funcs
+
+M.n = midi_notes()
 
 function M.off(port, note, channel)
   if note and note ~= "." then
@@ -244,9 +305,9 @@ end
 function meth:shift(a)
   local x
   if a < 0 then
-    x = moses.push(self, moses.pop(self, math.abs(a)))
+    x = push(self, pop(self, math.abs(a)))
   else
-    x = moses.addTop(self, moses.unshift(self, a))
+    x = add_top(self, unshift(self, a))
   end
   return x
 end
@@ -266,27 +327,6 @@ function meth:as_chord(counter, inicial, final, port, vel, channel)
   end
 end
 
---
-local cor1 = wrap(function (v)
-  while true do
-    for x in v:gmatch"." do
-      if x == " "  then
-        yield(x)
-      else
-        yield(x)
-      end
-    end
-  end
-end)
-
-local cor2 = wrap(function (t)
-  while true do
-    for i = 1, #t do
-      yield(t[i])
-    end
-  end
-end)
---
 function meth:as_pattern(p)
   local t = {}
   for i=1, #self do
@@ -294,6 +334,42 @@ function meth:as_pattern(p)
       t[i] = "."
     else
       t[i] = cor2(self)
+    end
+  end
+  return t
+end
+
+function meth:fill()
+  local j = 1
+  local x = extract(self)
+  if self[1] == "." then
+    x = add_top(x, unshift(x, 1))
+  end
+  local y = push(a, pop(a, 1))
+  for i = 1, #a do
+    if y[i] ~= "." then
+      y[i] = x[j]
+      j = j + 1
+    end
+  end
+  return y
+end
+
+function meth:keys(l)
+  local t = {}
+  for k = 1, l do
+    t[k] = {}
+  end
+  for c, v in ipairs(self) do
+    for m = 1, #v do
+      table.insert(t[v[m]], c)
+    end
+  end
+  for o = 1, l do
+    if #t[o] == 0 then
+      t[o] = "."
+    elseif #t[o] == 1 then
+      t[o] = t[o][1]
     end
   end
   return t
