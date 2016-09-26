@@ -82,7 +82,7 @@ local function midi_notes()
   local t = {}
   local c = 0
   for i = -1, 8 do
-    for j in n:gmatch"%g+" do
+    for j in n:gmatch(pattern2) do
       t[j..i] = c
       c = c + 1
     end
