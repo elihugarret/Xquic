@@ -1,7 +1,6 @@
 --[[
 TODO:
- read keys in table
-
+text algo
 --]]
 
 local M = {}
@@ -22,6 +21,7 @@ local random = math.random
 local xp = xpcall
 local wrap = coroutine.wrap
 local yield = coroutine.yield
+local pattern1, pattern2  = "{(.-)}", "%g+"
 
 local loadf = audio.sampleFromFile
 local play = audio.soundPlay
@@ -90,22 +90,25 @@ local function midi_notes()
   return t
 end
 
+local function iter_s(a) for v in x do yield(k) end end
+
 local function syn(s)
   local t = {}
   local i, j = 1, 1
-  local w
-  for v in s:gmatch"%g+" do
-    if v:match"%:" then
+  local marked, nested = s:gsub(pattern, "M"), s:gmatch(pattern)
+  local coro = wrap(iter_s)
+  for v in marked:gmatch(pattern2) do
+    if v == "M" then
       t[i] = {}
-      w = v:gsub("[%:%(%)]+", " ")
-      for b in w:gmatch"%g+" do
-        t[i][j] = b
+      for e in coro(nested):gmatch(pattern2) do
+        t[i][j] = e
         j = j + 1
       end
     else
       t[i] = v
     end
     i = i + 1
+    j = 1
   end
   return t
 end
@@ -139,7 +142,7 @@ local function specific_normal(t1, t2)
   return tq
 end
 
-local cor1 = wrap(function (v)
+local function wor1(v)
   while true do
     for x in v:gmatch"." do
       if x == " "  then
@@ -149,15 +152,15 @@ local cor1 = wrap(function (v)
       end
     end
   end
-end)
+end
 
-local cor2 = wrap(function (t)
+local function wor2(t)
   while true do
     for i = 1, #t do
       yield(t[i])
     end
   end
-end)
+end
 
 local function extract(a)
   local t = {}
@@ -170,6 +173,7 @@ local function extract(a)
   end
   return t
 end
+
 
 -- Objects
 
@@ -277,26 +281,55 @@ function M.sample(s)
   play(sound, s.L, s.R, s.disparity, s.pitch)
 end
 
-function splay(sound, left, right, disparity, pitch)
+local function ssplay(sound, left, right, disparity, pitch)
   if sound and type(sound) == "string" and sound ~= "." then
     play(samples[sound], left, right, disparity, pitch)
   end
 end
 
+function M.splay(sound, left, right, disparity, pitch)
+  if type(sound) == "table" then
+    for i = 1, #sound do
+      ssplay(sound[i], left, right, disparity, pitch)
+    end
+  else
+    ssplay(sound, left, right, disparity, pitch)
+  end
+end
 
 -- Midi funcs
 
 M.n = midi_notes()
 
+local function ooff(note, port, channel)
+    if note and note ~= "." then
+      send_message(port, 128, M.n[note] or note, 0, channel)
+    end
+end
+
 function M.off(port, note, channel)
-  if note and note ~= "." then
-    send_message(port, 128, M.n[note] or note, 0, channel)
+  if type(note) == "table" then
+    for i = 1, #note do
+      ooff(note[i], port,channel)
+    end
+  else
+    ooff(note, port,channel)
   end
 end
 
-function M.on(port, note, vel, channel)
+local function oon(note, vel, port, channel)
   if not note and note ~= "." then
     note_on(port, 128, M.n[note] or note, 0, channel)
+  end
+end
+
+function M.on(note, vel, port, channel)
+  if type(note) == "table" then
+    for i = 1, #note do
+      oon(note[i], vel, port, channel)
+    end
+  else
+    oon(note, vel, port, channel)
   end
 end
 
@@ -329,6 +362,7 @@ end
 
 function meth:as_pattern(p)
   local t = {}
+  local cor1, cor2 = wrap(wor1), wrap(wor2)
   for i=1, #self do
     if cor1(p) == " " then
       t[i] = "."
