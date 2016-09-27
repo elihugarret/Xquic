@@ -35,7 +35,7 @@ local pop = moses.pop
 local unshift = moses. unshift
 
 local mt = {} -- The Meta T
-local mtt = {} -- Another Meta T
+local meth = {} -- Another Meta T
 
 -- non-local stuff
 M.range = moses.range
