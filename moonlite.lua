@@ -90,12 +90,12 @@ local function midi_notes()
   return t
 end
 
-local function iter_s(a) for v in x do yield(k) end end
+local function iter_s(a) for v in a do yield(v) end end
 
 local function syn(s)
   local t = {}
   local i, j = 1, 1
-  local marked, nested = s:gsub(pattern, "M"), s:gmatch(pattern)
+  local marked, nested = s:gsub(pattern1, "M"), s:gmatch(pattern1)
   local coro = wrap(iter_s)
   for v in marked:gmatch(pattern2) do
     if v == "M" then
@@ -204,6 +204,7 @@ function mt.__add(a, b)
       t[i] = "."
     end
   end
+  setmetatable(t, mt)
   return t
 end
 
@@ -221,10 +222,15 @@ function mt.__sub(a, b)
       t[i] = "."
     end
   end
+  setmetatable(t, mt)
   return t
 end
 
-function mt.__unm(a) return moses.reverse(a) end
+function mt.__unm(a) 
+  local x = moses.reverse(a) 
+  setmetatable(x, mt)
+  return x 
+end
 
 -- General Functions
 
@@ -307,7 +313,7 @@ local function ooff(note, port, channel)
     end
 end
 
-function M.off(port, note, channel)
+function M.off(note, port, channel)
   if type(note) == "table" then
     for i = 1, #note do
       ooff(note[i], port,channel)
@@ -318,8 +324,8 @@ function M.off(port, note, channel)
 end
 
 local function oon(note, vel, port, channel)
-  if not note and note ~= "." then
-    note_on(port, 128, M.n[note] or note, 0, channel)
+  if note and note ~= "." then
+    note_on(port, M.n[note] or note, vel, channel)
   end
 end
 
@@ -351,42 +357,45 @@ function meth:as_chord(counter, inicial, final, port, vel, channel)
   channel = channel or 0
   if counter == inicial then
     for c, v in ipairs(self) do
-      M.on(port, M.n[v] or v, vel, channel)
+      M.on(M.n[v] or v, vel, port, channel)
     end
   elseif counter == final then
     for x, y in ipairs(self) do
-      M.off(port,  M.n[v] or v, channel)
+      M.off(M.n[y] or v, port, channel)
     end
   end
 end
 
-function meth:as_pattern(p)
+function meth:as_pattern(p, tam)
   local t = {}
   local cor1, cor2 = wrap(wor1), wrap(wor2)
-  for i=1, #self do
+  for i=1, tam do
     if cor1(p) == " " then
       t[i] = "."
     else
       t[i] = cor2(self)
     end
   end
-  return t
+  setmetatable(t, mt)
+  return t 
 end
 
 function meth:fill()
+  local z = moses.clone(self)
   local j = 1
   local x = extract(self)
   if self[1] == "." then
     x = add_top(x, unshift(x, 1))
   end
-  local y = push(a, pop(a, 1))
-  for i = 1, #a do
+  local y = push(z, pop(z, 1))
+  for i = 1, #self do
     if y[i] ~= "." then
       y[i] = x[j]
       j = j + 1
     end
   end
-  return y
+  setmetatable(y, mt)
+  return self, y
 end
 
 function meth:keys(l)
@@ -406,9 +415,11 @@ function meth:keys(l)
       t[o] = t[o][1]
     end
   end
+  setmetatable(t, mt)
   return t
 end
 
 mt.__index = meth
 
 return M
+
