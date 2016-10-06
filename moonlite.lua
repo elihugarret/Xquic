@@ -43,10 +43,10 @@ M.loop = audio.loop
 M.stop = audio.soundStop
 -- Load samples
 -- Sets a drum kit
-M.kit = ""
+
 -- You can add more samples here!
 local s_dir = "../Samples/Sounds/"
-local dir = "../Samples/"..M.kit
+local dir = "../Samples/"
 local kick = loadf(dir.."kick.ogg")
 local snare = loadf(dir.."snare.ogg")
 local openhat = loadf(dir.."openhat.ogg")
@@ -403,7 +403,7 @@ function meth:keys(l)
   for k = 1, l do
     t[k] = {}
   end
-  for c, v in ipairs(self) do
+  for c, v in pairs(self) do
     for m = 1, #v do
       table.insert(t[v[m]], c)
     end
@@ -416,6 +416,11 @@ function meth:keys(l)
     end
   end
   setmetatable(t, mt)
+  return t
+end
+
+function meth:shuffle()
+  local t = moses.shuffle(self, os.clock())
   return t
 end
 
