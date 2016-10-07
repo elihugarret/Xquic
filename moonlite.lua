@@ -113,33 +113,49 @@ local function syn(s)
   return t
 end
 
-local function int_normalize(i, f, t)
+local function mean(t)
+  local m = 0
+  local l = #t
+  for i = 1, l do
+    m = m + t[i]
+  end
+  return m/l
+end
+
+local function variance(t, x)
+  local s, v, l = 0, 0, #t
+  local m = mean(t)
+  if x == "sample" then s = 1 end
+  for i = 1, l do
+    v = math.pow((t[i] - m), 2)
+  end
+  return v / (l - s)
+end
+
+local function s_deviation(t, x)
+  local v = variance(t, x)
+  return math.sqrt(v)
+end
+
+local function standard(t, x)
   local tr = {}
-  local x_max = moses.max(t)
-  local x_min = moses.min(t)
-  for j = 1, #t do
-    tr[j] = math.floor(i + (((t[j] - x_min) * (f - i)) / (x_max - x_min)))
+  local m = mean(t)
+  local s = s_deviation(t, x)
+  for i = 1, #t do
+    tr[i] = (t[i] - m) / s
   end
   return tr
 end
 
-local function ft_normalize(i, f, t)
+local function normal(t, a, b)
+  a = a or 0
+  b = b or 1
   local tr = {}
-  local x_max = moses.max(t)
-  local x_min = moses.min(t)
-  for j = 1, #t do
-    tr[j] = i + (((t[j] - x_min) * (f - i)) / (x_max - x_min))
+  local min, max = moses.min(t), moses.max(t)
+  for i = 1, #t do
+    tr[i] = a + ((t[i] - min) * (b - a) / (max- min))
   end
   return tr
-end
-
-local function specific_normal(t1, t2)
-  local tq = {}
-  local n = normalize(1, #t1, t2)
-  for c, v in ipairs(n) do
-    tq[c] = t1[v]
-  end
-  return tq
 end
 
 local function wor1(v)
@@ -226,10 +242,10 @@ function mt.__sub(a, b)
   return t
 end
 
-function mt.__unm(a) 
-  local x = moses.reverse(a) 
+function mt.__unm(a)
+  local x = moses.reverse(a)
   setmetatable(x, mt)
-  return x 
+  return x
 end
 
 -- General Functions
@@ -377,7 +393,7 @@ function meth:as_pattern(p, tam)
     end
   end
   setmetatable(t, mt)
-  return t 
+  return t
 end
 
 function meth:fill()
@@ -427,4 +443,3 @@ end
 mt.__index = meth
 
 return M
-
