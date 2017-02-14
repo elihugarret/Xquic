@@ -1,15 +1,22 @@
-scheduler = Rx.CooperativeScheduler.create()
+sch = Rx.CooperativeScheduler.create()
 
 local tb = {
-  1, 2, 3, 4, 1, 2, 3, 4,
-  1, 2, 3, 4, 1, 2, 3, 4,
-  1, 2, 3, 4, 1, 2, 3, 4,
-  1, 2, 3, 4, 1, 2, 3, 4,
+ 60, 60, 0, 72, 60, 60, 60, 60,
+ 60, 60, 60, 60, 60, 60, 60, 60,
+ 60, 60, 60, 60, 60, 60, 60, 60,
+ 60, 60, 70, 60, 60, 60, 60, 60,
+ 60, 60, 0, 72, 60, 60, 60, 60,
+ 60, 60, 60, 60, 60, 60, 60, 60,
+ 60, 60, 60, 60, 60, 60, 60, 60,
+ 60, 60, 70, 60, 60, 60, 60, 60,
 }
 
-scheduler:schedule(seq(tb), timer_resolution)
+sch:schedule(x.seq(tb, 2), timer_resolution)
+sch:schedule(x.seq(tb, 0), timer_resolution)
 
-while scheduler.currentTime <= (32/16) do
-  scheduler:update(timer_resolution)
-  sleep(1/16)
+while sch.currentTime <= 32/16 do
+  sch:update(timer_resolution)
+  x.sleep(1/8)
 end
+
+--os.exit()
