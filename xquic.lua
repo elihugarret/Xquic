@@ -9,21 +9,22 @@ function X.sleep(s)
 end
 
 local function on(port, note, vel, channel)
-  if note ~= 0 then
+  if type(note) ~= "number" then
     midi.sendMessage(port, 144, note, vel, channel)
   end
 end
 
 local function off(port, note, channel)
-  if note ~= 0 then
+  if type(note) ~= "number" then
     midi.sendMessage(port, 128, note, 0, channel)
   end
 end
 
-function X.seq(a, ch)
+function X.seq(a, ch, root)
   local i = 1
   local size
   return function ()
+    local note = a[i] + root
     while true do
       on(1, a[i], 70, ch)
       coroutine.yield(1 / #a)
