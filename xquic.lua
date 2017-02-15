@@ -62,3 +62,26 @@ function X.init(file)
 end
 
 return X
+
+--[[
+local moses = require"moses"
+
+local a = {1, 2, 3, {7, 1, 2, 3, 4, 5}, 4, 5, 6, 7}
+
+local function f (index, value, x, y)
+  local d = moses.detect(x, value)
+  local r
+  if d then
+    return y[d] or y[(d % #y) + #y] or y[d % #y]
+  elseif moses.isTable(value) then
+    r = moses.map(value, f, x, y)
+    return r
+  else
+    return value
+  end
+end
+
+local b = moses.map(a, f, {7, 1, 2, 3, 4, 5}, {"a", "b", "c"})
+
+print(unpack(b[4]))
+]]--
