@@ -84,4 +84,25 @@ end
 local b = moses.map(a, f, {7, 1, 2, 3, 4, 5}, {"a", "b", "c"})
 
 print(unpack(b[4]))
-]]--
+--]]
+
+--[[
+local moses = require"moses"
+
+local _ = false
+
+local t = {1, _, _, _, _, _, _, _, 1, _, _, _, _, _}
+--        {1, _, 2, _, 3, _, 4}
+
+local tc = moses.clone(t)
+
+for i = 1, #tc do
+  if not tc[i] then
+    --if not tc[i] then i = #tc end 
+    table.insert(tc, i - 1, false)
+    table.remove(tc, i + 1)
+  end
+end
+
+print(unpack(tc))
+--]]
