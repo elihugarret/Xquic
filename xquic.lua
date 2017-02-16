@@ -1,12 +1,11 @@
 local X = {}
-local ffi = require'ffi'
-local midi = require "luamidi"
+local ffi = require"ffi"
+local midi = require"luamidi"
+local moses = require"moses"
+
+local X.Seq = {}
 
 ffi.cdef"void Sleep(int ms);"
-
-function X.sleep(s)
-  ffi.C.Sleep(s*1000)
-end
 
 local function on(port, note, vel, channel, root)
   if note then
@@ -35,7 +34,20 @@ local function off(port, note, channel, root)
   end
 end
 
-function X.seq(a, ch, root)
+function X.sleep(s)
+  ffi.C.Sleep(s*1000)
+end
+
+function X.Seq.new(t)
+  local self = { t = t }
+  setmetatable( self, { __index = X.Seq })
+end
+
+function X.seq:replace()
+  
+end
+
+function X.play(a, ch, root)
   local i = 1
   local size = #a
   return function ()
@@ -65,9 +77,7 @@ return X
 
 --[[
 local moses = require"moses"
-
 local a = {1, 2, 3, {7, 1, 2, 3, 4, 5}, 4, 5, 6, 7}
-
 local function f (index, value, x, y)
   local d = moses.detect(x, value)
   local r
@@ -80,29 +90,22 @@ local function f (index, value, x, y)
     return value
   end
 end
-
 local b = moses.map(a, f, {7, 1, 2, 3, 4, 5}, {"a", "b", "c"})
-
 print(unpack(b[4]))
 --]]
 
 --[[
 local moses = require"moses"
-
 local _ = false
-
 local t = {1, _, _, _, _, _, _, _, 1, _, _, _, _, _}
 --        {1, _, 2, _, 3, _, 4}
-
 local tc = moses.clone(t)
-
 for i = 1, #tc do
   if not tc[i] then
-    --if not tc[i] then i = #tc end 
+    --if not tc[i] then i = #tc end
     table.insert(tc, i - 1, false)
     table.remove(tc, i + 1)
   end
 end
-
 print(unpack(tc))
 --]]
