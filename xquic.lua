@@ -3,9 +3,11 @@ local ffi = require"ffi"
 local midi = require"luamidi"
 local moses = require"moses"
 
-X.Seq = {}
+local mt = {__index = X.Seq}
 
 ffi.cdef"void Sleep(int ms);"
+
+function X.sleep(s) ffi.C.Sleep(s*1000) end
 
 local function on(port, note, vel, channel, root)
   if note then
@@ -47,23 +49,24 @@ local function f (index, value, x, y)
   end
 end
 
-function X.sleep(s)
-  ffi.C.Sleep(s*1000)
-end
-
-function X.Seq.new(t)
-  local self = { tabla = t }
-  setmetatable(self,  { __index = X.Seq })
+function X.new(tabla, channel, root, filled)
+  local self = {
+    tabla = tabla,
+    channel = channel,
+    root = root,
+    filled = filled
+  }
+  setmetatable(self,  mt)
   return self
 end
 
-function X.Seq:replace(t1, t2)
+function X:replace(t1, t2)
   local res = moses.map(self.tabla, f, t1, t2)
   self.tabla = res
   return self
 end
 
-function X.Seq:fill()
+function X:fill()
   local tc = moses.clone(self.tabla)
   for i = 1, #tc do
     if not tc[i] then
@@ -75,17 +78,16 @@ function X.Seq:fill()
   return self
 end
 
-function X.play(a, ch, root)
+function X:play()
   local i = 1
-  local size = #a
-  return function ()
-    repeat
-      on(1, a[i], 70, ch, root)
-      coroutine.yield()
-      off(1, a[i], ch, root)
-      i = i + 1
-    until i > size
-  end
+  local size = #self.tabla
+  local off_notes = self
+  repeat
+    on(1, self.tabla[i], 70, self.channel, self.root)
+    coroutine.yield()
+    off(1, self.tabla[i], self.channel, self.root)
+    i = i + 1
+  until i > size
 end
 
 function X.init(file)
