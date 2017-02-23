@@ -79,13 +79,12 @@ function X.play(a, ch, root)
   local i = 1
   local size = #a
   return function ()
-    while true do
+    repeat
       on(1, a[i], 70, ch, root)
       coroutine.yield()
       off(1, a[i], ch, root)
       i = i + 1
-      if i > size then break end
-    end
+    until i > size
   end
 end
 
