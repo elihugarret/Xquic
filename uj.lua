@@ -1,24 +1,18 @@
-local ix = Rx.CooperativeScheduler.create()
+ix = Rx.CooperativeScheduler.create()
 local _prog = prog()
 
-local a = {
- 0, 2, 2, _,   {0, 1, 7}, _, 2, 3,   0, 2, 2, 3,   {0, 1, 7}, _, 2, _,
- 0, _, 2, _,   {0, 1, 7}, _, 2, _,   0, _, 2, _,   {0, 1, 7}, 2, 2, _,
- 0, _, 2, _,   {0, 1, 7}, 2, 2, _,   0, _, 2, _,   {0, 1, 7}, _, 2, _,
- 0, _, 2, _,   {0, 1, 7}, _, 2, 3,   0, _, 2, _,   {0, 1, 7}, _, 2, 2,
+local b = x.new{
+  0, 7, 7, _,   {0, 3, 12}, _, 7, 3,   0, 7, 7, 3,   0, _, 7, _,
+  0, _, 7, 12,           0, _, 7, _,   0, _, 7, _,   0, 7, 7, _,
+  0, _, 7, _,            0, 7, 7, _,   0, _, 7, _,   0, _, 7, _,
+  0, _, 7, _,            0, _, 7, 7,   0, _, 7, _,   0, 12, 7, 7,
 }
+b.channel = 2
+b.root = 60 + _prog
 
-local b = {
- 0, 7, 7, _,   {0, 3, 12}, _, 7, 3,   0, 7, 7, 3,   0, _, 7, _,
- 0, _, 7, 12,  0, _, 7, _,            0, _, 7, _,   0, 7, 7, _,
- 0, _, 7, _,   0, 7, 7, _,            0, _, 7, _,   0, _, 7, _,
- 0, _, 7, _,   0, _, 7, 7,            0, _, 7, _,   0, 12, 7, 7,
-}
+ix:schedule(function () b:play() end, timer_resolution)
 
-ix:schedule(x.play(a, 4, 48), timer_resolution)
-ix:schedule(x.play(b, 2, 60 + _prog), timer_resolution)
-
-repeat 
+repeat
   ix:update(timer_resolution)
   if ix.currentTime > 64/16 then break end
   x.sleep(1/8)
