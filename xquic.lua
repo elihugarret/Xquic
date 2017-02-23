@@ -3,7 +3,7 @@ local ffi = require"ffi"
 local midi = require"luamidi"
 local moses = require"moses"
 
-local X.Seq = {}
+X.Seq = {}
 
 ffi.cdef"void Sleep(int ms);"
 
@@ -34,17 +34,45 @@ local function off(port, note, channel, root)
   end
 end
 
+local function f (index, value, x, y)
+  local d = moses.detect(x, value)
+  local r
+  if d then
+    return y[d] or y[(d % #y) + #y] or y[d % #y]
+  elseif moses.isTable(value) then
+    r = moses.map(value, f, x, y)
+    return r
+  else
+    return value
+  end
+end
+
 function X.sleep(s)
   ffi.C.Sleep(s*1000)
 end
 
 function X.Seq.new(t)
-  local self = { t = t }
-  setmetatable( self, { __index = X.Seq })
+  local self = { tabla = t }
+  setmetatable(self,  { __index = X.Seq })
+  return self
 end
 
-function X.seq:replace()
-  
+function X.Seq:replace(t1, t2)
+  local res = moses.map(self.tabla, f, t1, t2)
+  self.tabla = res
+  return self
+end
+
+function X.Seq:fill()
+  local tc = moses.clone(self.tabla)
+  for i = 1, #tc do
+    if not tc[i] then
+      table.insert(tc, i - 1, false)
+      table.remove(tc, i + 1)
+    end
+  end
+  self.offs = tc
+  return self
 end
 
 function X.play(a, ch, root)
@@ -74,38 +102,3 @@ function X.init(file)
 end
 
 return X
-
---[[
-local moses = require"moses"
-local a = {1, 2, 3, {7, 1, 2, 3, 4, 5}, 4, 5, 6, 7}
-local function f (index, value, x, y)
-  local d = moses.detect(x, value)
-  local r
-  if d then
-    return y[d] or y[(d % #y) + #y] or y[d % #y]
-  elseif moses.isTable(value) then
-    r = moses.map(value, f, x, y)
-    return r
-  else
-    return value
-  end
-end
-local b = moses.map(a, f, {7, 1, 2, 3, 4, 5}, {"a", "b", "c"})
-print(unpack(b[4]))
---]]
-
---[[
-local moses = require"moses"
-local _ = false
-local t = {1, _, _, _, _, _, _, _, 1, _, _, _, _, _}
---        {1, _, 2, _, 3, _, 4}
-local tc = moses.clone(t)
-for i = 1, #tc do
-  if not tc[i] then
-    --if not tc[i] then i = #tc end
-    table.insert(tc, i - 1, false)
-    table.remove(tc, i + 1)
-  end
-end
-print(unpack(tc))
---]]
