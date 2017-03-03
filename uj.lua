@@ -40,4 +40,4 @@ repeat
   x.sleep(1/8)
 until false
 
-os.exit()
+--os.exit()
