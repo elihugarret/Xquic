@@ -78,6 +78,18 @@ function X:fill()
   return self
 end
 
+function X:shuffle()
+  self.tabla = moses.shuffle(self.tabla)
+  return self
+end
+
+function X:future(event, counter, method, ...)
+  if event == counter then
+    self[method](self, ...)
+  end
+  return self
+end
+
 function X:play()
   local i = 1
   local size = #self.tabla
