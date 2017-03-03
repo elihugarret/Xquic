@@ -3,7 +3,7 @@ local ffi = require"ffi"
 local midi = require"luamidi"
 local moses = require"moses"
 
-local mt = {__index = X.Seq}
+local mt = {__index = X}
 
 ffi.cdef"void Sleep(int ms);"
 
@@ -54,7 +54,7 @@ function X.new(tabla, channel, root, filled)
     tabla = tabla,
     channel = channel,
     root = root,
-    filled = filled
+    port = 1
   }
   setmetatable(self,  mt)
   return self
@@ -81,11 +81,11 @@ end
 function X:play()
   local i = 1
   local size = #self.tabla
-  local off_notes = self
+  self.offs = self.offs or self.tabla
   repeat
-    on(1, self.tabla[i], 70, self.channel, self.root)
+    on(self.port, self.tabla[i], 70, self.channel, self.root)
     coroutine.yield()
-    off(1, self.tabla[i], self.channel, self.root)
+    off(self.port, self.offs[i], self.channel, self.root)
     i = i + 1
   until i > size
 end
